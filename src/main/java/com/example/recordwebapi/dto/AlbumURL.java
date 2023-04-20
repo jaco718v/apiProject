@@ -9,4 +9,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class AlbumURL {
   private String master_url;
+
+  private String title;
 }

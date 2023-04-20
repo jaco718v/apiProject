@@ -34,7 +34,7 @@ public class AlbumService {
 
   String DISCOGS_URL = "https://api.discogs.com/database";
 
-  String FIXED_PROMPT = "Output seperated by ','. Generate 12 tags for the album: ";
+  String FIXED_PROMPT = "Output seperated by ','. Generate 13 tags for the album: ";
 
 
   WebClient client = WebClient.create();
@@ -55,7 +55,27 @@ public class AlbumService {
     }
     */
 
-    String inputPrompt = FIXED_PROMPT + albumName;
+
+    String discogSearch = "/search?q="+albumName+"&format=album&per_page=1"+"&token="+ALBUM_API_KEY;
+
+    AlbumSearch albumSearch = client.get()
+        .uri(DISCOGS_URL+discogSearch)
+        .header("User-Agent","smallApiProject")
+        .retrieve()
+        .bodyToMono(AlbumSearch.class).block();
+
+    if(albumSearch == null){
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Error getting request");
+    }
+
+    if(albumSearch.getResults().isEmpty()){
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"No results found");
+    }
+
+    String completeTitle = albumSearch.getResults().get(0).getTitle();
+
+
+    String inputPrompt = FIXED_PROMPT + completeTitle;
 
     Map<String, Object> body = new HashMap<>();
 
@@ -75,21 +95,6 @@ public class AlbumService {
       e.printStackTrace();
     }
 
-    String discogSearch = "/search?q="+albumName+"&format=album&per_page=1"+"&token="+ALBUM_API_KEY;
-
-    AlbumSearch albumSearch = client.get()
-        .uri(DISCOGS_URL+discogSearch)
-        .header("User-Agent","smallApiProject")
-        .retrieve()
-        .bodyToMono(AlbumSearch.class).block();
-
-    if(albumSearch == null){
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Error getting request");
-    }
-
-    if(albumSearch.getResults().isEmpty()){
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"No results found");
-    }
 
     String masterURL = albumSearch.getResults().get(0).getMaster_url();
 
@@ -98,6 +103,7 @@ public class AlbumService {
         .header("User-Agent","smallApiProject")
         .retrieve()
         .bodyToMono(AlbumInfo.class);
+
 
     Mono<OpenApiResponse> openApiResponse = client.post()
         .uri(OPENAI_URL)
@@ -127,8 +133,9 @@ public class AlbumService {
   }
 
   public AlbumResponse makeAlbumResponse(AlbumInfo albumInfo, OpenApiResponse openApiResponse){
-    List<String> tags = Arrays.asList(openApiResponse.choices.get(0).text.substring(2).split(", "));
+    List<String> tags = Arrays.asList(openApiResponse.choices.get(0).text.split(", "));
     ArrayList<String> tagList = new ArrayList<>(tags);
+    tagList.remove(0);
     ArrayList<String> artists = makeArtistsToStringArray(albumInfo.getArtists());
     return new AlbumResponse(albumInfo,tagList,artists);
   }
