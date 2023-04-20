@@ -24,10 +24,10 @@ public class AlbumService {
     this.albumRepository = albumRepository;
   }
 
-  @Value("${app.openai-api-key}")
+  @Value("${app.openai_api_key}")
   private String AI_API_KEY;
 
-  @Value("${app.discogs-api-key}")
+  @Value("${app.discogs_api_key}")
   private String ALBUM_API_KEY;
 
   String OPENAI_URL = "https://api.openai.com/v1/completions";
